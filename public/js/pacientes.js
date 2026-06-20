@@ -94,8 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const startPage = Math.max(1, currentPage - 1);
         const endPage = Math.min(lastPage, currentPage + 1);
-        
-        // Primeira página
+
         if (startPage > 1) {
             const firstPage = document.createElement('span');
             firstPage.className = 'page-number';
@@ -180,11 +179,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentPage < lastPage) loadPacientes(currentPage + 1, searchInput.value);
     });
 
-    if (searchInput) {
-        searchInput.addEventListener("input", debounce(() => {
-            loadPacientes(1, searchInput.value);
-        }, 500));
+   searchInput.addEventListener("input", debounce(() => {
+
+    const query = searchInput.value.trim();
+
+    // menos de 3 letras = lista normal
+    if (query.length < 3) {
+
+        loadPacientes(1, '');
+        return;
+
     }
+
+    loadPacientes(1, query);
+
+}, 500));
 
     loadPacientes();
 });

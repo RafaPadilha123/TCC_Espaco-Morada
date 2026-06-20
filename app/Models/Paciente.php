@@ -17,6 +17,11 @@ class Paciente extends Model
         'email',
         'telefone',
         'status',
+        'data_inativacao',
+    ];
+    
+    protected $casts = [
+    'data_inativacao' => 'date',
     ];
 
     public function sessoes()

@@ -1,0 +1,66 @@
+#toast-container {
+
+    position: fixed;
+
+    top: 20px;
+    right: 20px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 14px;
+
+    z-index: 99999;
+}
+
+.toast {
+
+    min-width: 320px;
+
+    padding: 18px;
+
+    border-radius: 18px;
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: 600;
+
+    box-shadow:
+        0 12px 30px rgba(0,0,0,0.18);
+
+
+    backdrop-filter: blur(10px);
+}
+
+.toast.success {
+
+    background:
+        linear-gradient(
+            135deg,
+            #27ae60,
+            #2ecc71
+        );
+}
+
+.toast.error {
+
+    background:
+        linear-gradient(
+            135deg,
+            #c0392b,
+            #e74c3c
+        );
+}
+
+.toast.warning {
+
+    background:
+        linear-gradient(
+            135deg,
+            #d68910,
+            #f39c12
+        );
+}

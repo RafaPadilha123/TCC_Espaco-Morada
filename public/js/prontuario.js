@@ -1,242 +1,738 @@
 document.addEventListener('DOMContentLoaded', () => {
+
     const newSessionBtn = document.querySelector('.new-session-btn');
     const sessionsList = document.querySelector('.sessions-list');
+
     const sessionNumberInput = document.getElementById('session-number');
     const sessionDateInput = document.getElementById('session-date');
     const sessionNotes = document.getElementById('session-notes');
+
     const sessionKeywordsInput = document.getElementById('session-keywords');
     const keywordsContainer = document.querySelector('.keywords-container');
+
     const saveBtn = document.querySelector('.save-btn');
+
+    const backBtn = document.getElementById('backBtn');
+
     const btnExcluirPaciente = document.getElementById('btnExcluirPaciente');
+
+    const statusBtn = document.getElementById('btnStatus');
+
+    const statusMenu = document.querySelector('.status-menu');
 
     let sessions = window.sessoesData || [];
     let currentSessionId = null;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-    // ===== FUNÇÃO PARA EXCLUIR PACIENTE =====
-    if (btnExcluirPaciente) {
-        btnExcluirPaciente.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const pacienteId = this.getAttribute('data-paciente-id');
-            
-            if (confirm('Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.')) {
-                excluirPaciente(pacienteId);
-            }
-        });
+    const csrfToken = document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute('content');
+
+    // =========================================
+    // 🔙 VOLTAR
+    // =========================================
+
+    if (backBtn) {
+
+    backBtn.addEventListener('click', (e) => {
+
+        e.preventDefault();
+
+        window.location.href = '/dashboard';
+
+    });
+
     }
 
-    function excluirPaciente(pacienteId) {
+    // =========================================
+    // 🗑️ EXCLUIR PACIENTE
+    // =========================================
+
+    if (btnExcluirPaciente) {
+
+    btnExcluirPaciente.addEventListener('click', () => {
+
+        const pacienteId =
+            btnExcluirPaciente.dataset.pacienteId;
+
+
+        // pega datas válidas
+        const datas = sessions.map(sessao => {
+
+            return new Date(
+                sessao.data_sessao.split('T')[0]
+            );
+
+        });
+
+        // pega a data mais recente
+        const dataUltimaSessao = new Date(
+            Math.max(...datas)
+        );
+
+        // hoje
+        const hoje = new Date();
+
+        // diferença em anos
+        let diferencaAnos =
+            hoje.getFullYear() -
+            dataUltimaSessao.getFullYear();
+
+        // ajusta mês/dia
+        const mesAtual = hoje.getMonth();
+        const mesSessao = dataUltimaSessao.getMonth();
+
+        if (
+            mesAtual < mesSessao ||
+            (
+                mesAtual === mesSessao &&
+                hoje.getDate() <
+                dataUltimaSessao.getDate()
+            )
+        ) {
+
+            diferencaAnos--;
+
+        }
+
+        console.log('Última sessão:', dataUltimaSessao);
+        console.log('Diferença anos:', diferencaAnos);
+
+        // bloqueia exclusão
+        if (diferencaAnos < 5) {
+
+           showToast(
+            'Paciente não pode ser excluído porque a última sessão possui menos de 5 anos.',
+            'warning'
+        );
+
+            return;
+
+        }
+
+        showConfirmToast(
+    'Deseja excluir este paciente?',
+    () => {
+
         fetch(`/pacientes/${pacienteId}`, {
+
             method: 'DELETE',
+
             headers: {
-                'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
+                'Content-Type': 'application/json'
             }
+
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw err; });
+        .then(async res => {
+
+            const data = await res.json();
+
+            if (!res.ok) {
+
+                throw new Error(
+                    data.message ||
+                    'Erro ao excluir paciente'
+                );
+
             }
-            return response.json();
+
+            return data;
+
         })
         .then(data => {
-            if (data.success) {
-                alert(data.message);
-                // Redireciona para a dashboard após exclusão bem-sucedida
-                window.location.href = '/dashboard';
-            } else {
-                alert(data.message || 'Erro ao excluir paciente.');
-            }
+
+            showToast(
+                data.message,
+                'success'
+            );
+
+            window.location.href = '/dashboard';
+
         })
-        .catch(error => {
-            console.error('Erro:', error);
-            if (error.message) {
-                alert(error.message);
-            } else {
-                alert('Erro ao excluir paciente. Verifique se o paciente não possui sessões cadastradas.');
+        .catch(err => {
+
+            showToast(
+                err.message,
+                'error'
+            );
+
+        });
+
+    }
+);
+
+        if (!confirmar) return;
+
+        fetch(`/pacientes/${pacienteId}`, {
+
+            method: 'DELETE',
+
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'application/json'
             }
+
+        })
+        .then(async res => {
+
+            const data = await res.json();
+
+            if (!res.ok) {
+
+                throw new Error(
+                    data.message ||
+                    'Erro ao excluir paciente'
+                );
+
+            }
+
+            return data;
+
+        })
+        .then(data => {
+
+            showToast(data.message);
+
+            window.location.href = '/dashboard';
+
+        })
+        .catch(err => {
+
+            console.error(err);
+
+            showToasts(err.message);
+
         });
-    }
 
-    // ===== FUNÇÕES PARA GERENCIAR SESSÕES =====
-    function renderSessions() {
-        // Ordena por numero_sessao crescente
-        sessions.sort((a, b) => a.numero_sessao - b.numero_sessao);
-
-        sessionsList.innerHTML = '';
-        sessions.forEach(sessao => {
-            const div = document.createElement('div');
-            div.classList.add('session-item');
-            if (sessao.id == currentSessionId) div.classList.add('active');
-
-            const dateParts = sessao.data_sessao.split('T')[0].split('-'); // ["2025","10","01"]
-            const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-            div.textContent = formattedDate;
-
-            div.dataset.id = sessao.id;
-            div.addEventListener('click', () => selectSession(sessao.id));
-            sessionsList.appendChild(div);
-        });
-    }
-
-    function selectSession(id) {
-        const sessao = sessions.find(s => s.id == id);
-        if (!sessao) return;
-
-        currentSessionId = sessao.id;
-        document.querySelectorAll('.session-item').forEach(item => item.classList.remove('active'));
-        document.querySelector(`.session-item[data-id="${id}"]`)?.classList.add('active');
-
-        sessionNumberInput.value = sessao.numero_sessao;
-        sessionDateInput.value = sessao.data_sessao.split('T')[0];
-        sessionNotes.value = sessao.registro;
-
-        const keywords = sessao.palavras_chave
-            ? JSON.parse(sessao.palavras_chave)
-            : [];
-        renderKeywords(keywords);
-    }
-
-    function renderKeywords(keywords) {
-        keywordsContainer.innerHTML = '';
-        keywords.forEach(k => {
-            const span = document.createElement('span');
-            span.classList.add('keyword-tag');
-            span.textContent = k;
-            keywordsContainer.appendChild(span);
-        });
-    }
-
-    newSessionBtn.addEventListener('click', () => {
-        currentSessionId = null;
-        sessionNumberInput.value = sessions.length ? Math.max(...sessions.map(s => s.numero_sessao)) + 1 : 1;
-        sessionDateInput.value = new Date().toISOString().split('T')[0];
-        sessionNotes.value = '';
-        sessionKeywordsInput.value = '';
-        keywordsContainer.innerHTML = '';
-        document.querySelectorAll('.session-item').forEach(item => item.classList.remove('active'));
     });
 
-    sessionKeywordsInput.addEventListener('keypress', e => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const value = sessionKeywordsInput.value.trim();
-            if (!value) return;
+}    // =========================================
+    // 🔄 STATUS
+    // =========================================
 
-            const tags = value.split(',').map(k => k.trim());
-            const existingTags = Array.from(keywordsContainer.querySelectorAll('.keyword-tag')).map(k => k.textContent);
-            const merged = [...existingTags, ...tags].filter((v, i, a) => a.indexOf(v) === i);
+    if (statusBtn && statusMenu) {
 
-            renderKeywords(merged);
-            sessionKeywordsInput.value = '';
-        }
-    });
+        statusBtn.addEventListener('click', e => {
 
-    saveBtn.addEventListener('click', () => {
-        const payload = {
-            numero_sessao: sessionNumberInput.value,
-            data_sessao: sessionDateInput.value,
-            registro: sessionNotes.value,
-            palavras_chave: JSON.stringify(
-                Array.from(keywordsContainer.querySelectorAll('.keyword-tag')).map(k => k.textContent)
-            )
-        };
+            e.stopPropagation();
 
-        const url = currentSessionId 
-            ? `/pacientes/${window.pacienteId}/sessoes/${currentSessionId}`
-            : `/pacientes/${window.pacienteId}/sessoes`;
+            statusMenu.style.display =
+                statusMenu.style.display === 'block'
+                    ? 'none'
+                    : 'block';
 
-        fetch(url, {
-            method: currentSessionId ? 'PUT' : 'POST',
+        });
+
+        document.addEventListener('click', () => {
+
+            statusMenu.style.display = 'none';
+
+        });
+
+        statusMenu.querySelectorAll('div')
+            .forEach(option => {
+
+                option.addEventListener('click', () => {
+
+                    const novoStatus =
+                        option.dataset.value;
+
+                    const pacienteId =
+                        statusBtn.dataset.pacienteId;
+
+                    atualizarStatus(
+                        pacienteId,
+                        novoStatus,
+                        null
+                    );
+
+                });
+
+            });
+
+    }
+
+    function atualizarStatus(
+        pacienteId,
+        status,
+        dataInativacao
+    ) {
+
+        fetch(`/pacientes/${pacienteId}/status`, {
+
+            method: 'PATCH',
+
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
-            body: JSON.stringify(payload)
+
+            body: JSON.stringify({
+
+                status: status,
+
+                data_inativacao: dataInativacao
+
+            })
+
         })
         .then(res => {
-            if (!res.ok) throw new Error('Erro ao salvar a sessão');
+
+            if (!res.ok) {
+
+                throw new Error(
+                    'Erro ao atualizar status'
+                );
+
+            }
+
             return res.json();
+
         })
         .then(data => {
-            if (currentSessionId) {
-                const index = sessions.findIndex(s => s.id == currentSessionId);
-                sessions[index] = data;
-            } else {
-                sessions.push(data);
-                currentSessionId = data.id;
-            }
-            renderSessions();
-            selectSession(currentSessionId);
-            alert('Sessão salva com sucesso!');
+
+            statusBtn.textContent =
+                data.novo_status.charAt(0).toUpperCase() +
+                data.novo_status.slice(1) +
+                ' ▼';
+
+            statusBtn.dataset.status =
+                data.novo_status;
+
+            statusBtn.style.backgroundColor =
+                data.novo_status === 'ativo'
+                    ? '#2ecc71'
+                    : data.novo_status === 'pausa'
+                        ? '#f39c12'
+                        : '#e74c3c';
+
         })
         .catch(err => {
+
             console.error(err);
-            alert('Erro ao salvar a sessão! Veja o console para detalhes.');
+
+            showToast('Erro ao atualizar status');
+
         });
+
+    }
+
+    // =========================================
+    // 🏷️ PALAVRAS-CHAVE
+    // =========================================
+
+    function getKeywords() {
+
+        return Array.from(
+            keywordsContainer.querySelectorAll('.keyword-tag')
+        ).map(tag => tag.dataset.keyword);
+
+    }
+
+    function renderKeywords(keywords) {
+
+        keywordsContainer.innerHTML = '';
+
+        keywords.forEach(keyword => {
+
+            const tag = document.createElement('div');
+
+            tag.classList.add('keyword-tag');
+
+            tag.dataset.keyword = keyword;
+
+            tag.innerHTML = `
+                <span>${keyword}</span>
+                <span class="remove-keyword">✕</span>
+            `;
+
+            tag.querySelector('.remove-keyword')
+                .addEventListener('click', () => {
+
+                    tag.remove();
+
+                });
+
+            keywordsContainer.appendChild(tag);
+
+        });
+
+    }
+
+    // =========================================
+    // ➕ ADICIONAR TAGS
+    // =========================================
+
+    sessionKeywordsInput.addEventListener('keydown', e => {
+
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+
+        e.preventDefault();
+
+        const value = sessionKeywordsInput.value.trim();
+
+        if (!value) return;
+
+        const novasTags = value
+            .split(' ')
+            .map(t => t.trim())
+            .filter(t => t.length);
+
+        const existentes = getKeywords();
+
+        novasTags.forEach(tag => {
+
+            if (!existentes.includes(tag)) {
+
+                existentes.push(tag);
+
+            }
+
+        });
+
+        renderKeywords(existentes);
+
+        sessionKeywordsInput.value = '';
+
     });
-    
-    
-   // Controle do menu de status
-const statusBtn = document.getElementById('btnStatus');
-const statusMenu = document.querySelector('.status-menu');
 
-if (statusBtn && statusMenu) {
-    // Exibe/esconde o menu
-    statusBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        statusMenu.style.display = statusMenu.style.display === 'block' ? 'none' : 'block';
-    });
+    // =========================================
+    // 📋 RENDER SESSÕES
+    // =========================================
 
-    // Fecha o menu ao clicar fora
-    document.addEventListener('click', () => {
-        statusMenu.style.display = 'none';
-    });
+    function renderSessions() {
 
-    // Clique em uma opção do menu
-    statusMenu.querySelectorAll('div').forEach(option => {
-        option.addEventListener('click', () => {
-            const novoStatus = option.dataset.value;
-            const pacienteId = statusBtn.dataset.pacienteId;
+        sessions.sort(
+            (a, b) =>
+                b.numero_sessao - a.numero_sessao
+        );
 
-            fetch(`/pacientes/${pacienteId}/status`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify({ status: novoStatus })
-            })
-            .then(res => {
-                if (!res.ok) throw new Error('Erro ao atualizar status');
-                return res.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    statusBtn.textContent = data.novo_status.charAt(0).toUpperCase() + data.novo_status.slice(1) + ' ▼';
-                    statusBtn.dataset.status = data.novo_status;
+        sessionsList.innerHTML = '';
 
-                    // Atualiza cor do botão conforme status
-                    statusBtn.style.backgroundColor =
-                        data.novo_status === 'ativo' ? '#2ecc71' :
-                        data.novo_status === 'pausa' ? '#f39c12' : '#e74c3c';
+        sessions.forEach(sessao => {
 
-                    alert(`Status atualizado para: ${data.novo_status}`);
-                }
-                statusMenu.style.display = 'none';
-            })
-            .catch(err => {
-                console.error(err);
-                alert('Erro ao atualizar o status!');
+            const div = document.createElement('div');
+
+            div.classList.add('session-item');
+
+            if (sessao.id == currentSessionId) {
+
+                div.classList.add('active');
+
+            }
+
+            const dateParts = sessao.data_sessao
+                .split('T')[0]
+                .split('-');
+
+            const formattedDate =
+                `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+
+            div.textContent = formattedDate;
+
+            div.dataset.id = sessao.id;
+
+            div.addEventListener('click', () => {
+
+                selectSession(sessao.id);
+
             });
+
+            sessionsList.appendChild(div);
+
         });
-    });
+
+    }
+
+    // =========================================
+    // 📂 SELECIONAR SESSÃO
+    // =========================================
+
+    function selectSession(id) {
+
+        const sessao = sessions.find(
+            s => s.id == id
+        );
+
+        if (!sessao) return;
+
+        currentSessionId = sessao.id;
+
+        document
+            .querySelectorAll('.session-item')
+            .forEach(item =>
+                item.classList.remove('active')
+            );
+
+        document
+            .querySelector(
+                `.session-item[data-id="${id}"]`
+            )
+            ?.classList.add('active');
+
+        sessionNumberInput.value =
+            sessao.numero_sessao;
+
+        sessionDateInput.value =
+            sessao.data_sessao.split('T')[0];
+
+        sessionNotes.value =
+            sessao.registro;
+
+        let keywords = [];
+
+        try {
+
+            keywords = sessao.palavras_chave
+                ? JSON.parse(sessao.palavras_chave)
+                : [];
+
+        } catch {
+
+            keywords = [];
+
+        }
+
+        renderKeywords(keywords);
+
+    }
+
+
+    function showToast(message, type = 'success') {
+
+    const container =
+        document.getElementById('toast-container');
+
+    const toast =
+        document.createElement('div');
+
+    toast.className = `toast ${type}`;
+
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+
+        toast.remove();
+
+    }, 3000);
+
+    }
+    
+    function showConfirmToast(message, onConfirm) {
+
+    const container =
+        document.getElementById('toast-container');
+
+    const toast =
+        document.createElement('div');
+
+    toast.className =
+        'toast confirm-toast';
+
+    toast.innerHTML = `
+
+        <div class="toast-message">
+            ${message}
+        </div>
+
+        <div class="toast-actions">
+
+            <button class="toast-cancel">
+                Cancelar
+            </button>
+
+            <button class="toast-confirm">
+                Excluir
+            </button>
+
+        </div>
+
+    `;
+
+    container.appendChild(toast);
+
+    toast
+        .querySelector('.toast-cancel')
+        .addEventListener('click', () => {
+
+            toast.remove();
+
+        });
+
+    toast
+        .querySelector('.toast-confirm')
+        .addEventListener('click', () => {
+
+            onConfirm();
+
+            toast.remove();
+
+        });
+
 }
 
-    // Inicializa renderização
+    // =========================================
+    // ➕ NOVA SESSÃO
+    // =========================================
+
+    newSessionBtn.addEventListener('click', () => {
+
+        currentSessionId = undefined;
+
+        sessionNumberInput.value =
+            sessions.length
+                ? Math.max(
+                    ...sessions.map(
+                        s => s.numero_sessao
+                    )
+                ) + 1
+                : 1;
+
+        sessionDateInput.value =
+            new Date()
+                .toISOString()
+                .split('T')[0];
+
+        sessionNotes.value = '';
+
+        sessionKeywordsInput.value = '';
+
+        keywordsContainer.innerHTML = '';
+
+        document
+            .querySelectorAll('.session-item')
+            .forEach(item =>
+                item.classList.remove('active')
+            );
+
+    });
+
+    // =========================================
+    // 💾 SALVAR SESSÃO
+    // =========================================
+
+    saveBtn.addEventListener('click', () => {
+
+        const payload = {
+
+            numero_sessao:
+                sessionNumberInput.value,
+
+            data_sessao:
+                sessionDateInput.value,
+
+            registro:
+                sessionNotes.value,
+
+            palavras_chave: JSON.stringify(
+                getKeywords()
+            )
+
+        };
+
+        const url = currentSessionId
+            ? `/pacientes/${window.pacienteId}/sessoes/${currentSessionId}`
+            : `/pacientes/${window.pacienteId}/sessoes`;
+
+        fetch(url, {
+
+            method:
+                currentSessionId
+                    ? 'PUT'
+                    : 'POST',
+
+            headers: {
+                'Content-Type':
+                    'application/json',
+
+                'X-CSRF-TOKEN':
+                    csrfToken
+            },
+
+            body: JSON.stringify(payload)
+
+        })
+        .then(res => {
+
+            if (!res.ok) {
+
+                throw new Error(
+                    'Erro ao salvar'
+                );
+
+            }
+
+            return res.json();
+
+        })
+        .then(data => {
+
+            // editar
+            if (currentSessionId) {
+
+                const index =
+                    sessions.findIndex(
+                        s =>
+                            s.id ==
+                            currentSessionId
+                    );
+
+                if (index !== -1) {
+
+                    sessions[index] = data;
+
+                }
+
+            }
+
+            // nova
+            else {
+
+                sessions.unshift(data);
+
+                currentSessionId =
+                    data.id;
+
+            }
+
+            renderSessions();
+
+            selectSession(
+                currentSessionId
+            );
+
+            showToast(
+                'Sessão salva com sucesso'
+            );
+
+        })
+        .catch(err => {
+
+            console.error(err);
+
+            showToast(
+                'Erro ao salvar sessão',
+                'error'
+            );
+
+        });
+
+    });
+
+    // =========================================
+    // 🚀 INIT
+    // =========================================
+
     renderSessions();
-    if(sessions.length) selectSession(sessions[0].id);
+
+    if (sessions.length) {
+
+        selectSession(
+            sessions[0].id
+        );
+
+    }
+
 });
