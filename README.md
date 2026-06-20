@@ -24,8 +24,3 @@ Como o projeto foi integralmente construído e testado sob o sistema operacional
 * Composer
 * MySQL Server
 
-### Instalação e Execução
-1. **Clonar o repositório:**
-   ```bash
-   git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
-   cd seu-repositorio
