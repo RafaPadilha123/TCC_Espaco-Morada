@@ -24,3 +24,39 @@ Como o projeto foi integralmente construído e testado sob o sistema operacional
 * Composer
 * MySQL Server
 
+**Instalar as dependências do PHP:**
+
+composer install
+
+**Configurar o Ambiente:**
+
+cp .env.example .env
+php artisan key:generate
+
+**Abra o arquivo .env recém-criado e configure o bloco de banco de dados (DB_):**
+
+    DB_CONNECTION=mysql
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=espaco_morada
+    DB_USERNAME=espaco
+    DB_PASSWORD=1234
+
+**Gerar a Chave de Segurança da Aplicação**
+
+php artisan key:generate
+
+**Criar o Banco de Dados no MySQL:**
+
+CREATE DATABASE espaco_morada;
+
+
+**Construir as Tabelas e Alimentar os Dados (Migrations e Seeds)**
+
+php artisan migrate --seed
+
+**Inicializar o Servidor Local**
+
+php artisan serve
+
+**Pronto! O terminal informará o endereço local.**
