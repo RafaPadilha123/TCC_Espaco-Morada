@@ -8,7 +8,7 @@ A aplicação foi projetada para atender de forma personalizada as necessidades 
 
 ## 🛠️ Tecnologias Utilizadas
 
-* **Backend:** PHP 8.x / Framework Laravel
+* **Backend:** PHP / Framework Laravel
 * **Frontend:** Blade Template Engine, HTML5, CSS3 e JavaScript
 * **Banco de Dados:** MySQL
 * **Ambiente de Desenvolvimento:** Visual Studio Code / Sistema Operacional Linux
