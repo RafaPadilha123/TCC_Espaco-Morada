@@ -31,7 +31,6 @@ composer install
 **Configurar o Ambiente:**
 
 cp .env.example .env
-php artisan key:generate
 
 **Abra o arquivo .env recém-criado e configure o bloco de banco de dados (DB_):**
 
