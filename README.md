@@ -59,3 +59,11 @@ php artisan migrate --seed
 php artisan serve
 
 **Pronto! O terminal informará o endereço local.**
+
+## 🔑 Credenciais para Acesso (Ambiente de Teste/Homologação)
+
+Para realizar o login na aplicação logo após a primeira execução, utilize as seguintes credenciais padrão criadas automaticamente pelo sistema de seeds:
+
+    E-mail de Acesso: admin@morada.com
+
+    Senha: morada1234
